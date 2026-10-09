@@ -86,6 +86,8 @@ svg.lines polyline{fill:none;stroke-width:7;stroke-linejoin:round;stroke-linecap
 .leash{position:absolute;object-fit:cover;pointer-events:none;animation:blink 1.1s ease-in-out infinite alternate}
 .plus1.pack{color:#ffb84a}
 .bigimg{animation:bigin .6s cubic-bezier(.2,1.5,.4,1)}
+.bigimg.winPulse{transform-origin:50% 50%;animation:bigin .6s cubic-bezier(.2,1.5,.4,1),winPulse 1.3s ease-in-out .6s infinite}
+@keyframes winPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.05)}}
 @keyframes bigin{from{transform:translate(-50%,-50%) scale(.3);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
 .pill{font:800 30px var(--body);color:var(--text);background:#0d2a5f;border:3px solid var(--gold);border-radius:14px;padding:12px 0;width:96px;text-align:center;cursor:pointer}
 .pill.na{opacity:.35;cursor:not-allowed}
@@ -1143,11 +1145,11 @@ async function celebrate(amount, perSpin){
     if (im) im.remove();
     let ih;
     if (IMG[tier + "_win"]){
-      im = img(tier + "_win", "abs bigimg", UI.overlay);
+      im = img(tier + "_win", "abs bigimg winPulse", UI.overlay);
       im.style.width = iw + "px"; ih = hOf(tier + "_win", iw);
     } else {
       // no artwork yet (e.g. EPIC WIN): a text title until the image arrives
-      im = el("div", "abs bigimg t tierTxt " + tier, UI.overlay); im.textContent = tier.toUpperCase() + " WIN";
+      im = el("div", "abs bigimg winPulse t tierTxt " + tier, UI.overlay); im.textContent = tier.toUpperCase() + " WIN";
       im.style.fontSize = "150px"; ih = 200;
     }
     im.id = "celebr"; im.style.transform = "translate(-50%,-50%)"; place(im, L.W/2, cy);
