@@ -153,7 +153,7 @@ svg.lines polyline{fill:none;stroke-width:7;stroke-linejoin:round;stroke-linecap
 #splash{position:absolute;inset:0;overflow:hidden;background:#06101f;z-index:50}
 #splashBg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #splash::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0000 55%,#06101fcc 88%,#06101f 100%);pointer-events:none}
-#splashLogo{position:absolute;left:50%;top:3vh;transform:translateX(-50%);width:min(52vw,92vh);height:auto;max-height:24svh;object-fit:contain;z-index:1;filter:drop-shadow(0 8px 24px #000a)}
+#splashLogo{position:absolute;left:var(--splash-center-x,50%);top:3vh;transform:translateX(-50%);width:min(52vw,92vh);height:auto;max-height:24svh;object-fit:contain;z-index:1;filter:drop-shadow(0 8px 24px #000a)}
 #loadWrap,#playBtn{position:absolute;left:var(--splash-center-x,50%);bottom:calc(var(--splash-foot-h,180px) + 24px);transform:translateX(-50%);z-index:2}
 #loadWrap{width:min(64vw,820px);aspect-ratio:1200/251;bottom:calc(var(--splash-foot-h,180px) + 40px)}
 #loadKeret{position:absolute;inset:0;width:100%;height:100%}
@@ -168,7 +168,7 @@ svg.lines polyline{fill:none;stroke-width:7;stroke-linejoin:round;stroke-linecap
 #provLogo{width:clamp(108px,13.05vw,196px);height:auto;max-height:10.8svh;max-width:45vw;object-fit:contain}
 #splash p{font:700 clamp(11px,1.5vh,15px)/1.35 var(--body);color:#c9d3ea;margin:0;text-align:center;max-width:100%;overflow-wrap:anywhere}
 #splashNote span{display:block}
-@media (orientation:portrait){#provLogo{width:clamp(146px,32.4vw,220px);max-height:14.6svh;transform:translateX(1vw)}#splashLogo{width:92vw;top:4vh;max-height:20svh}#loadWrap{width:84vw}#playBtn{width:62vw}}
+@media (orientation:portrait){#provLogo{width:clamp(146px,32.4vw,220px);max-height:14.6svh}#splashLogo{width:92vw;top:4vh;max-height:20svh}#loadWrap{width:84vw}#playBtn{width:62vw}}
 @media (prefers-reduced-motion:reduce){.card.lit,.winplate,.sumpanel,.item.win,.antic,.sticky.drop,.bigimg,.rarityArt,.float,.fade,#game.scatter-shake{animation:none!important}}
 </style>
 <div id="game">
@@ -404,12 +404,26 @@ function mobileGeom(){
   const f=LY.frame, k=f.w/DIMS.keret_mobile[0], ky=k*MOBILE_STRETCH_Y, cells=[];
   for(let r=0;r<5;r++) for(let row=0;row<3;row++) cells.push({cx:f.x+MOBILE_CX[r]*k,cy:f.y+MOBILE_CY[row]*ky,w:MOBILE_HOLE_W*k,h:MOBILE_HOLE_H*ky});
   return {k,ky,cells,pitch:262*ky,cellDX:222*k,cellDY:262*ky,sym:155*k,frameH:hOf("keret_mobile",f.w)*MOBILE_STRETCH_Y,holeW:MOBILE_HOLE_W*k,holeH:MOBILE_HOLE_H*ky,fillW:208*k,fillH:244*ky,
-    inner:{x0:f.x+124*k,y0:f.y+230*ky,x1:f.x+1220*k,y1:f.y+1016*ky}};
+    inner:{x0:f.x+124*k,y0:f.y+245*ky,x1:f.x+1220*k,y1:f.y+986*ky}};
 }
+// Actual transparent windows of keret_mobile, independently of tile overscan.
+// Keep the gold chamfer corners and bottom rail outside the mask cutouts.
+const MOBILE_GRID_WINDOWS = [[245,465],[507,735],[773,987]];
 function mobileGridMask(){
   const [w,h]=DIMS.keret_mobile;
-  const holes=MOBILE_CX.flatMap(x=>MOBILE_CY.map(y=>`<rect x="${x-MOBILE_HOLE_W/2}" y="${y-MOBILE_HOLE_H/2}" width="${MOBILE_HOLE_W}" height="${MOBILE_HOLE_H}" fill="black"/>`)).join("");
-  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><defs><mask id="m"><rect width="100%" height="100%" fill="white"/>${holes}</mask></defs><rect width="100%" height="100%" fill="white" mask="url(#m)"/></svg>`)}")`;
+  const holes=MOBILE_CX.flatMap(cx=>MOBILE_GRID_WINDOWS.map(([y0,y1])=>{
+    const x0=cx-84,x1=cx+84,c=16;
+    return `M${x0+c},${y0}H${x1-c}L${x1},${y0+c}V${y1-c}L${x1-c},${y1}H${x0+c}L${x0},${y1-c}V${y0+c}Z`;
+  })).join(" ");
+  // An alpha-only path avoids nested SVG luminance-mask differences in Safari.
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path fill="white" fill-rule="evenodd" d="M0,0H${w}V${h}H0Z ${holes}"/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+function reelViewport(r){
+  const top=cellOf(r,0), w=Math.max(top.w+50,G.fillW+8);
+  const y0=S.portrait?G.inner.y0:top.cy-G.pitch/2;
+  const h=S.portrait?G.inner.y1-y0:3*G.pitch;
+  return {x:top.cx-w/2,y:y0,w,h,off:top.cy-y0-G.pitch/2};
 }
 // Visible alpha bounds, not transparent image padding, define the wild footprint.
 const WILD_BOUNDS = {w1:[230,230,7,7,223,219],w2:[230,230,8,7,222,219],w3:[230,230,8,9,222,221],w4:[230,230,9,7,221,219],w5:[300,300,0,0,300,300]};
@@ -487,6 +501,8 @@ function layout(){
   const mask=S.portrait ? mobileGridMask() : "none";
   UI.grid.style.maskImage=UI.grid.style.webkitMaskImage=mask;
   UI.grid.style.maskSize=UI.grid.style.webkitMaskSize="100% 100%";
+  UI.grid.style.maskRepeat=UI.grid.style.webkitMaskRepeat="no-repeat";
+  UI.grid.style.maskMode="alpha";
   UI.mobileLogo.hidden=!S.portrait || S.inBonus;
   const logoH=hOf("splash_logo_full",560);
   placeC(UI.mobileLogo,L.frame.x+L.frame.w/2,L.frame.y+65*(G.ky||G.k)-12-logoH/2,560,logoH);
@@ -656,13 +672,12 @@ function symEl(ch){
 function buildReels(){
   UI.reelLayer.innerHTML = ""; R.clips = []; R.strips = []; R.items = [];
   for (let r = 0; r < 5; r++){
-    const top = cellOf(r, 0);
+    const v = reelViewport(r);
     const clip = el("div", "clip", UI.reelLayer);
-    // the clip spans three full row pitches, so big symbols may overlap the gold grid a little
-    const y0 = top.cy - G.pitch/2, w = Math.max(top.w + 50, G.fillW + 8);
-    place(clip, top.cx - w/2, y0, w, 3*G.pitch);
+    // Portrait strips stop inside the artwork's actual top/bottom rails.
+    place(clip,v.x,v.y,v.w,v.h);
     clip.style.background = S.portrait ? "#081d37" : "";
-    clip.dataset.off = 0;
+    clip.dataset.off = v.off;
     const strip = el("div", "strip", clip);
     R.clips.push(clip); R.strips.push(strip);
     setColumn(r, R.current[r], false);
